@@ -80,9 +80,12 @@ end
     
 imshow(II)
     
-    
+tform = affine2d([1 .2 0;-0.25 1 0; 0 0 1]);
 
 
+J = imwarp(II,tform);
+figure
+imshowpair(I, J, 'montage')
 
 
 
