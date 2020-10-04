@@ -1,0 +1,10 @@
+%% Read Image
+img = imread('matlab_teste1.jpg');
+
+%% Convert to grayscale image
+Igray = rgb2gray(img);
+imshow(Igray);
+
+%% Using a brightness threshold to set elements in image to white, everything above the threshold is white
+level = 0.5;
+Itresh = im2bw()
