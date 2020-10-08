@@ -2,31 +2,32 @@ import cv2
 import numpy as np
 import helper_methods
 
-pathImage = "matlab_teste1.jpg"
-img = cv2.imread(pathImage)
-# Reducing image sizes improves OpenCv's performance
-height = int(img.shape[0] / 2)
-width = int(img.shape[1] / 2)
 
 # Video camera
-webCamFeed = True
-cap = cv2.VideoCapture(0)
-cap.set(10,160)
+pathInputVideo = "media/video1.mp4"
+pathOutputVideo = "media/video1_out.mp4"
+cap = cv2.VideoCapture(pathInputVideo)
+out = cv2.VideoWriter(pathOutputVideo, cv2.VideoWriter_fourcc(*'mp4v'), 20.0, (640,480))
+#cap.set(10,160)
 
-while True:
-    if cap.isOpened(): 
-        ret, img = cap.read()
-        height = 640
-        width = 480
+while cap.isOpened():
+
+    ret, img_tmp = cap.read()
+
+    if ret:
+        img = img_tmp.astype('uint8')
     else:
-        img = cv2.imread(pathImage)
-        height = int(img.shape[0] / 2)
-        width = int(img.shape[1] / 2)
+        continue
+
+    height = int(img.shape[0] / 2)
+    width = int(img.shape[1] / 2)
+    img = cv2.resize(img, (width, height))
+
 
     # Main project pipeline
     img_blank = np.zeros((height, width, 3), np.uint8) #Blank image
 
-    img = cv2.resize(img, (width, height))
+
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img_blur = cv2.GaussianBlur(img_gray, (5, 5), 1)
     img_threshold = cv2.Canny(img_blur, 100, 200)
@@ -75,8 +76,16 @@ while True:
     stacked_images = helper_methods.stackImages(image_array, 0.75, labels)
     cv2.imshow("Result", stacked_images)
 
+    # write the flipped frame
+    out.write(stacked_images)
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
+else:
+    print("Error reading video file") 
+
+
 cap.release()
+out.release()
 cv2.destroyAllWindows()
