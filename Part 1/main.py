@@ -3,15 +3,24 @@ import numpy as np
 import helper_methods
 
 
-# Video camera
-pathInputVideo = "media/video2.mov"
-pathOutputVideo = "media/video1_out.mp4"
-cap = cv2.VideoCapture(pathInputVideo)
-out = cv2.VideoWriter(pathOutputVideo, cv2.VideoWriter_fourcc(*'mp4v'), 20.0, (640,480))
-header_gray = cv2.imread("media/header.png", 0)
 
+# Video camera properties
+pathInputVideo = "Part 1/media/video1.mp4"
+pathOutputVideo = pathInputVideo.replace(".mp4","_output.avi")
+cap = cv2.VideoCapture(pathInputVideo)
+fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
+out = cv2.VideoWriter(pathOutputVideo,fourcc, 20.0,(int(cap.get(3)),int(cap.get(4)))) # TODO
+
+header_gray = cv2.imread("Part 1/media/header.png", 0)
+cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
+cv2.setWindowProperty("window",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+
+# global flags
 biggest_found = False
 paper_contour_found = False
+SAVE_VIDEO = True
+DISPLAY_VIDEO = True
+
 
 while True:
 
@@ -88,22 +97,24 @@ while True:
         else:
             image_array = ([img_contours,img,img_gray,img_threshold],
                         [img_blank, img_blank, img_blank, img_blank])
-    
+    else:
+        continue
+
     labels = [["Original", "Gray", "Threshold", "Contours"],
             ["Biggest Contour", "Warp Perpective", "Warp Grey", "Adaptive Threshold"]]
 
-    stacked_images = helper_methods.stackImages(image_array, 0.75, labels)
-    cv2.imshow("Result", stacked_images)
+    if SAVE_VIDEO:
+        # write the flipped frame
+        out.write(img_warp_colored)
 
-    # write the flipped frame
-    # out.write(stacked_images)
+    if DISPLAY_VIDEO:
+        stacked_images = helper_methods.stackImages(image_array, 0.75, labels)
+        cv2.imshow("window", stacked_images)
+    
+
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
-else:
-    print("Error reading video file") 
-
 
 cap.release()
 out.release()
