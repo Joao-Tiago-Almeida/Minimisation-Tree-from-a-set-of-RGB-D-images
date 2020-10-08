@@ -37,11 +37,12 @@ def reorder(my_points):
     my_points_ordered[1] = my_points[np.argmin(diff)]
     my_points_ordered[2] = my_points[np.argmax(diff)]
 
+
     # diff = np.diff(my_points, axis=1)
-    # my_points_ordered[0] = my_points[np.argmin(diff)]
-    # my_points_ordered[3] = my_points[np.argmin(add)]
+    # my_points_ordered[0] = my_points[np.argmax(diff)]
+    # my_points_ordered[3] = my_points[np.argmin(diff)]
     
-    # my_points_ordered[1] = my_points[np.argmax(diff)]
+    # my_points_ordered[1] = my_points[np.argmin(add)]
     # my_points_ordered[2] = my_points[np.argmax(add)]
  
     return my_points_ordered
