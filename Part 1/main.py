@@ -139,7 +139,7 @@ def video_fun(biggest):
 
             if SAVE_VIDEO:
                 # write the flipped frame
-                out.write(img_warp_colored)
+                out.write(img)
 
             if DISPLAY_VIDEO:
                 #stacked_images = helper_methods.stackImages(image_array, 0.75, labels)
