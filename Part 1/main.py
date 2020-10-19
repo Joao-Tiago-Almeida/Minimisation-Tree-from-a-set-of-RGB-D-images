@@ -83,15 +83,6 @@ def get_biggest():
                     #paper_contour_found = True 
                     return biggest
 
-                '''
-                    # Give it a more scanned look
-                img_adaptive_threshold = cv2.adaptiveThreshold(img_warp_gray, 255, 1, 1, 7, 2) # Get binary image
-                img_adaptive_threshold = cv2.bitwise_not(img_adaptive_threshold) # Reverse it, all 0 -> 1 and all 1 -> 0
-                img_adaptive_threshold = cv2.medianBlur(img_adaptive_threshold,3) # Reduce some noise
-
-                image_array = ([img, img_gray, img_threshold, img_contours],
-                        [img_big_contour, img_warp_colored, img_warp_gray, img_adaptive_threshold])
-                '''
             else:
                 continue
         else:
@@ -134,12 +125,21 @@ def video_fun(biggest):
             # Convert our image to grayscale
             img_warp_gray = cv2.cvtColor(img_warp_colored, cv2.COLOR_BGR2GRAY)
 
+            # Give it a more scanned look
+            img_adaptive_threshold = cv2.adaptiveThreshold(img_warp_gray, 255, 1, 1, 7, 2) # Get binary image
+            img_adaptive_threshold = cv2.bitwise_not(img_adaptive_threshold) # Reverse it, all 0 -> 1 and all 1 -> 0
+            img_adaptive_threshold = cv2.medianBlur(img_adaptive_threshold,3) # Reduce some noise
+
+            # image_array = ([img, img_gray, img_threshold, img_contours],
+            #         [img_big_contour, img_warp_colored, img_warp_gray, img_adaptive_threshold])
+
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
             if SAVE_VIDEO:
                 # write the flipped frame
-                out.write(img)
+                frame_array.append( img_adaptive_threshold )
+                
 
             if DISPLAY_VIDEO:
                 #stacked_images = helper_methods.stackImages(image_array, 0.75, labels)
@@ -164,16 +164,31 @@ cv2.setWindowProperty("window",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 cap = cv2.VideoCapture(pathInputVideo)
 
 pathOutputVideo = pathInputVideo.replace(".mp4","_output.mp4")
-fourcc = cv2.VideoWriter_fourcc(*('mp4v'))
-out = cv2.VideoWriter(pathOutputVideo,fourcc, 20.0,(int(cap.get(3)),int(cap.get(4)))) # TODO
 
 
 
+frame_array=[]
 try:
     video_fun(biggest)
 except:
     pass
 
+
 cap.release()
-out.release()
 cv2.destroyAllWindows()
+
+if SAVE_VIDEO:
+
+    size = (frame_array[0].shape[1],frame_array[0].shape[0])
+
+    layers_3 = frame_array[0].shape[0] == 3
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(pathOutputVideo,fourcc, 20.0,size, layers_3) # TODO
+
+
+    for i in range(len(frame_array)):
+        # writing to a image array
+        out.write(frame_array[i])
+
+    out.release()
