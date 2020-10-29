@@ -14,7 +14,7 @@ header_gray = cv2.imread("Part 1/media/header.png", 0)
 # global flags
 biggest_found = False
 paper_contour_found = False
-SAVE_VIDEO = True
+SAVE_VIDEO = False
 DISPLAY_VIDEO = True
 
 def get_biggest():
