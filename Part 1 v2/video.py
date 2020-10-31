@@ -9,9 +9,13 @@ final_H = None
 
 #reading image
 
-template_file = "images/resized_template.png"
+template_file = "images/template2.png"
 
 template = cv2.imread(template_file)
+
+resize = lambda x: cv2.resize(x, (int(x.shape[1]/2) , int(x.shape[0]/2) ))
+
+template = resize(template)
 
 while True:
 
@@ -21,6 +25,8 @@ while True:
 
             if not ret:
                 break
+
+            img = resize(img)
 
             final_H = getHomography( img, template )
 
@@ -68,4 +74,4 @@ if final_H is not None:
     out.release()
 
 else:
-    print("Could not find an H matrix ! :( ")
+    print("Could not find any H matrix ! :( ")

@@ -9,11 +9,18 @@ import pickle as pk
 
 #reading image
 
-pathfile = "images/resized_paperview.jpg"
-template_file = "images/resized_template.png"
+pathfile = "images/foto.png"
+template_file = "images/template2.png"
 
 img = cv2.imread(pathfile)
 template = cv2.imread(template_file)
+
+resize = lambda x: cv2.resize(x, (int(x.shape[1]/2) , int(x.shape[0]/2) ))
+
+template = resize(template)
+img = resize(img)
+
+
 '''
 cv2.imshow('image', img)
 cv2.imshow('template', template)
@@ -151,22 +158,19 @@ def getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers, max_inlier
 
 
 
-
-'''
-
-# final_H = ransac( xy=xy, dim=template.shape[0:2], tresh_num_inliers=0.50, tresh_dist_inliers = 6) 
+final_H = ransac( xy=xy, dim=template.shape[0:2], tresh_num_inliers=0.50, tresh_dist_inliers = 15) 
 
 # pk.dump(final_H, open('H.p', 'wb'))
 
 breakpoint
 
-final_H = pk.load(open('H6.p', 'rb'))
+#final_H = pk.load(open('H6.p', 'rb'))
 img_warp_colored = cv2.warpPerspective(img, final_H, (template.shape[1],template.shape[0]))
 cv2.imshow('filtered_image', img_warp_colored)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-
+'''
 
 new_template = np.empty(template.shape, dtype=np.uint8)
 

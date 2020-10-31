@@ -32,7 +32,7 @@ def getHomography(img, template):
         xy2.append(keypoints_2[k.trainIdx].pt)
 
     xy = [xy1, xy2]
-    return ransac( xy=xy, dim=template.shape[0:2], tresh_num_inliers=0.50, tresh_dist_inliers = 6) 
+    return ransac( xy=xy, dim=template.shape[0:2], tresh_num_inliers=0.50, tresh_dist_inliers = 10) 
 
 
 def ransac(xy,dim,tresh_num_inliers,tresh_dist_inliers):
@@ -44,7 +44,7 @@ def ransac(xy,dim,tresh_num_inliers,tresh_dist_inliers):
     template = 1    # template frame
     x = 0   # xx coordinate
     y = 1   # yy coordinate
-    for i in range(10000):
+    for i in range(1000):
 
         # compute homography matrix -> A@H = B
         A = []
@@ -88,7 +88,7 @@ def ransac(xy,dim,tresh_num_inliers,tresh_dist_inliers):
         print('cant find H')
         return None
         
-        
+
 def getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers, max_inliers ):
     
     x = 0   # xx coordinate
