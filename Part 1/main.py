@@ -59,9 +59,9 @@ def get_biggest():
             if paper_contour_found is False:
                 biggest, max_area = helper_methods.get_biggest_contour(contours)
                 biggest_found = biggest.size != 0
-            
+
             if biggest_found:
-                
+
                 biggest = helper_methods.reorder(biggest)
                 cv2.drawContours(img_big_contour, biggest, -1, (0, 255, 0), 20) # Draw contour 'biggest' in the 'img_big_contour'
                 original_points = np.float32(biggest)
@@ -80,14 +80,14 @@ def get_biggest():
 
                 threshold = 0.5
                 if np.amax(res) > threshold:
-                    #paper_contour_found = True 
+                    #paper_contour_found = True
                     return biggest
 
             else:
                 continue
         else:
             continue
-    
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
@@ -139,7 +139,7 @@ def video_fun(biggest):
             if SAVE_VIDEO:
                 # write the flipped frame
                 frame_array.append( img_adaptive_threshold )
-                
+
 
             if DISPLAY_VIDEO:
                 #stacked_images = helper_methods.stackImages(image_array, 0.75, labels)
@@ -181,7 +181,7 @@ if SAVE_VIDEO:
 
     size = (frame_array[0].shape[1],frame_array[0].shape[0])
 
-    layers_3 = frame_array[0].shape[0] == 3
+    layers_3 = frame_array[0].shape[2] == 3
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(pathOutputVideo,fourcc, 20.0,size, layers_3) # TODO
