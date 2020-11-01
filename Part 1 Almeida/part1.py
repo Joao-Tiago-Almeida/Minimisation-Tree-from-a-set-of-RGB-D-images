@@ -55,7 +55,7 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
                                                                  tresh_num_inliers = 0.50,
                                                                  tresh_dist_inliers = 1.5,
                                                                  max_iterations = 1000,
-                                                                 min_inliers = 40,
+                                                                 min_inliers = 30,
                                                                  debug = DEBUG)
 
             # Get a list when the homography doesn't fulfil the requirements
@@ -153,8 +153,9 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
 
     out.release()
 
-
-template_image = 'templates/templateP1.png'
-moviein_filename = 'videos/Nasty.mp4'
+'''
+template_image = 'templates/templateP2.png'
+moviein_filename = 'videos/simpatico.mp4'
 movieout_filename = moviein_filename.replace(".mp4",".output.mp4")
 part1(template_image,moviein_filename,movieout_filename)
+'''

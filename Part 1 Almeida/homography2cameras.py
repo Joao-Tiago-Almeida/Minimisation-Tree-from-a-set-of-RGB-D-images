@@ -16,7 +16,7 @@ def getHomography(frame: np.array, template: np.array, tresh_num_inliers=0.50, t
     return homography
 
 '''
-sift = cv2.SIFT_create()
+Run SIFT algoritm
 '''
 def findFeatures( frame: np.array ) -> ( tuple ):
     sift = cv2.SIFT_create()
