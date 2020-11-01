@@ -80,6 +80,7 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
 
     # When everything done, release the video capture object
     cap.release()
+    print('')
 
     # Storage the Homography with the best found 
     homography = homography if homography is not None else close_H
@@ -150,6 +151,6 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
 
 
 template_image = 'templates/templateP2.png'
-moviein_filename = 'videos/simpatico.mp4'
+moviein_filename = 'videos/Nasty.mp4'
 movieout_filename = moviein_filename.replace(".mp4",".output.mp4")
 part1(template_image,moviein_filename,movieout_filename)
