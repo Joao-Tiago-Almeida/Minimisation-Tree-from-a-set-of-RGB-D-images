@@ -64,7 +64,7 @@ for k in matches:
 #     xy2.append(i[1])
 
 xy = [xy1, xy2]
-breakpoint
+# breakpoint
 
 def ransac(xy,dim,tresh_num_inliers,tresh_dist_inliers):
 
@@ -112,11 +112,11 @@ def ransac(xy,dim,tresh_num_inliers,tresh_dist_inliers):
         max_inliers, best_H = ( ninliers, H)  if ninliers > max_inliers else (max_inliers, best_H)
 
         if max_inliers >= tresh_num_inliers*len(xy[video]): # if we get at least tresh_dist_inliers% of inlier points
-            print(f'Nice H :)')
+            print('Nice H :)')
             return H
 
     else:   # can´t find H
-        print(f'found a matrix H with {100*max_inliers/len(xy[0]):.1f}% inliers')
+        print('found a matrix H with {100*max_inliers/len(xy[0]):.1f}% inliers')
         return best_H
         
         
@@ -142,7 +142,7 @@ def getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers, max_inlier
         u, v = point_template_projective[0:2]/point_template_projective[2]
 
         if ( (u < 0) or (u >= dim[1]) or (v < 0) or (v >= dim[0]) ):  # outside the template
-            breakpoint
+            # breakpoint
             continue
 
         point_template_projective = np.array( [ u, v ] )
@@ -162,44 +162,43 @@ final_H = ransac( xy=xy, dim=template.shape[0:2], tresh_num_inliers=0.75, tresh_
 
 pk.dump(final_H, open('HN2.p', 'wb'))
 
-breakpoint
+# breakpoint
 
 #final_H = pk.load(open('Hn1.p', 'rb'))
-img_warp_colored = cv2.warpPerspective(img, final_H, (int(1*template.shape[1]), int(1*template.shape[0])))
-cv2.imshow('filtered_image', img_warp_colored)
-cv2.waitKey(0)
+# img_warp_colored = cv2.warpPerspective(img, final_H, (int(1*template.shape[1]), int(1*template.shape[0])))
+# cv2.imshow('filtered_image', img_warp_colored)
+# cv2.waitKey(0)
 
-pk.dump(img_warp_colored, open('frameN2.p', 'wb'))
+# pk.dump(img_warp_colored, open('frameN2.p', 'wb'))
 
 # img1 = median_2D(img_warp_colored)
 # cv2.imshow('img1', img1)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
-H1 = pk.load(open('Hn1.p', 'rb'))
-final_H = final_H@inv(H1)
-pk.dump(final_H, open('HT.p', 'wb'))
+# H1 = pk.load(open('Hn1.p', 'rb'))
+# final_H = final_H@inv(H1)
+# pk.dump(final_H, open('HT.p', 'wb'))
 
 
-'''
 
 new_template = np.empty(template.shape, dtype=np.uint8)
 
-
-for y in range(img.shape[0]):
-    for x in range(img.shape[1]):
+for y in range(template.shape[0]):
+    for x in range(template.shape[1]):
 
         XY_video = np.array( [x, y, 1] )
 
-        XY_template = final_H@XY_video
+        XY_template = inv(final_H)@XY_video
         u ,v = XY_template[0:2]/XY_template[2]
 
         if 0 < u and u < new_template.shape[1] and 0 < v and v < new_template.shape[0]:
-            new_template[int(v)][int(u)] = img[y][x]
+            new_template[y][x] = img[int(v)][int(u)]
 
 cv2.imshow('image', new_template)
 cv2.waitKey(0)
 
+'''
 
 pk.dump(new_template, open('frame.p', 'wb'))
 
