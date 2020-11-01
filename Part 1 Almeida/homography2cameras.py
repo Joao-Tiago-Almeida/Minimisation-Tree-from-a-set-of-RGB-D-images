@@ -7,12 +7,12 @@ from random import randrange as rdr
 Manage to find homography that has at least {tresh_num_inliers} inliers.
 It is classified as inlier when its SSE is under than {tresh_dist_inliers} pixels.
 '''
-def getHomography(frame: np.array, template: np.array, tresh_num_inliers=0.50,
-                tresh_dist_inliers=5,max_iterations=1000, debug=False)  -> ( np.array ):
+def getHomography(frame: np.array, template: np.array, tresh_num_inliers=0.50, tresh_dist_inliers=5,
+                max_iterations=1000, min_inliers=10, debug=False)  -> ( np.array ):
 
     points = computeMatchPoints( frame, template)
     homography = ransac( points ,template.shape[0:2], tresh_num_inliers,
-                            tresh_dist_inliers, max_iterations, debug) 
+                         tresh_dist_inliers,max_iterations, min_inliers, debug) 
     return homography
 
 '''
@@ -95,30 +95,34 @@ def computeHomography( xy: list ) -> ( np.array ):
 '''
 Run Ransac Algoritm
 '''
-def ransac( xy, dim, tresh_num_inliers, tresh_dist_inliers, max_iterations, debug ) -> ( np.array ):
+def ransac( xy, dim, tresh_num_inliers, tresh_dist_inliers, max_iterations, min_inliers, debug ) -> ( np.array ):
 
     max_inliers = 0
-
+    H_best = None
     # Run the algoritm {max_iterations} times
     for i in range(max_iterations):
+        num_inliers = 0
 
         # get homography matrix
         H = computeHomography( xy )
         
-
         try: num_inliers = getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers )
         except: pass    # Sometimes A is a singluar matrix and H can not be found
 
-        max_inliers, H = ( num_inliers, H)  if num_inliers > max_inliers else (max_inliers, H)
+        # Need at least {min_inliers} points
+        if num_inliers < min_inliers:
+            continue
+
+        max_inliers, H_best = ( num_inliers, H)  if num_inliers > max_inliers else (max_inliers, H_best)
 
         if max_inliers >= tresh_num_inliers*len(xy[0]): # if we get at least tresh_dist_inliers% of inlier points
             if debug: print(f'\nAn Homography which fulfil all the requirements was found :)')
-            return H
+            return H_best
 
     else:   # can´t find H
         percentage = max_inliers/len(xy[0])
         if debug: print(f'\nFound a matrix H with {100*percentage:.1f}% inliers')
-        return [percentage, H]
+        return [percentage, H_best]
         
 '''
 Computes the number of inliers

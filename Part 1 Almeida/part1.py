@@ -55,11 +55,12 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
                                                                  tresh_num_inliers = 0.50,
                                                                  tresh_dist_inliers = 1.5,
                                                                  max_iterations = 1000,
+                                                                 min_inliers = 40,
                                                                  debug = DEBUG)
 
             # Get a list when the homography doesn't fulfil the requirements
             if isinstance(homography,list):
-                ratio_inliers, close_H  = tuple(homography)  if ratio_inliers < homography[0] else (ratio_inliers, close_H)
+                ratio_inliers, close_H  = tuple(homography) if ratio_inliers < homography[0] else (ratio_inliers, close_H)
                 frame_counter = 1
                 homography = None
 
@@ -83,7 +84,10 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
     print('')
 
     # Storage the Homography with the best found 
-    homography = homography if homography is not None else close_H
+    homography = homography if homography is not None else close_H.copy()
+    if homography is None:
+        print("Could not find any H matrix ! :( - No output video")
+        exit()
     
     # Output dimension
     height = template.shape[0]
@@ -112,7 +116,7 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
             # Actual frame number
             if DEBUG:
                 frame_number+=1
-                print(f'\rComputing new prespective { "."*((frame_number%3)+1) }\t', end ='')
+                print(f'\rComputing new prespective { "."*((frame_number%3)+1) }', end ='')
 
             # Resize the image and compute an homography
             img = resize(img)
@@ -150,7 +154,7 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
     out.release()
 
 
-template_image = 'templates/templateP2.png'
+template_image = 'templates/templateP1.png'
 moviein_filename = 'videos/Nasty.mp4'
 movieout_filename = moviein_filename.replace(".mp4",".output.mp4")
 part1(template_image,moviein_filename,movieout_filename)
