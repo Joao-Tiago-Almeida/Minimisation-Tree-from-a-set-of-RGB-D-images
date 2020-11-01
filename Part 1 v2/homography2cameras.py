@@ -32,7 +32,7 @@ def getHomography(img, template):
         xy2.append(keypoints_2[k.trainIdx].pt)
 
     xy = [xy1, xy2]
-    return ransac( xy=xy, dim=template.shape[0:2], tresh_num_inliers=0.50, tresh_dist_inliers = 10) 
+    return ransac( xy=xy, dim=template.shape[0:2], tresh_num_inliers=0.50, tresh_dist_inliers = 1.5) 
 
 
 def ransac(xy,dim,tresh_num_inliers,tresh_dist_inliers):
@@ -78,15 +78,16 @@ def ransac(xy,dim,tresh_num_inliers,tresh_dist_inliers):
         
         ninliers = getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers, max_inliers )
 
-        max_inliers = ninliers if ninliers > max_inliers else max_inliers
+        max_inliers, best_H = ( ninliers, H)  if ninliers > max_inliers else (max_inliers, best_H)
 
         if max_inliers >= tresh_num_inliers*len(xy[video]): # if we get at least tresh_dist_inliers% of inlier points
             print(f'Nice H :)')
             return H
 
     else:   # can´t find H
-        print('cant find H')
-        return None
+        percentage = max_inliers/len(xy[0])
+        print(f'found a matrix H with {100*percentage:.1f}% inliers')
+        return [percentage, best_H]
         
 
 def getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers, max_inliers ):
@@ -124,3 +125,9 @@ def getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers, max_inlier
         
     return inliers
 
+
+def infinite_sequence():
+    num = 0
+    while True:
+        yield num
+        num += 1

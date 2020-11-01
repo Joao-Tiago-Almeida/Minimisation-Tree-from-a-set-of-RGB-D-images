@@ -58,12 +58,16 @@ def get_biggest_contour(contours):
     return biggest,max_area
 
 
-#reading image
-pathfile = "images/resized_paperview.jpg"
-template_file = "images/resized_template.png"
+pathfile = "images/foto.png"
+template_file = "images/template2.png"
 
 img = cv2.imread(pathfile)
 template = cv2.imread(template_file)
+
+resize = lambda x: cv2.resize(x, (int(x.shape[1]/2) , int(x.shape[0]/2) ))
+
+template = resize(template)
+img = resize(img)
 
 # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 # template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)

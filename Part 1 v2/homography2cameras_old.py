@@ -12,7 +12,7 @@ import pickle as pk
 pathfile = "images/foto.png"
 template_file = "images/template2.png"
 
-img = cv2.imread(pathfile)
+img =  pk.load(open('frameN1.p', 'rb')) #cv2.imread(pathfile)
 template = cv2.imread(template_file)
 
 resize = lambda x: cv2.resize(x, (int(x.shape[1]/2) , int(x.shape[0]/2) ))
@@ -109,15 +109,15 @@ def ransac(xy,dim,tresh_num_inliers,tresh_dist_inliers):
         
         ninliers = getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers, max_inliers )
 
-        max_inliers = ninliers if ninliers > max_inliers else max_inliers
+        max_inliers, best_H = ( ninliers, H)  if ninliers > max_inliers else (max_inliers, best_H)
 
         if max_inliers >= tresh_num_inliers*len(xy[video]): # if we get at least tresh_dist_inliers% of inlier points
             print(f'Nice H :)')
             return H
 
     else:   # can´t find H
-        print('cant find H')
-        return None
+        print(f'found a matrix H with {100*max_inliers/len(xy[0]):.1f}% inliers')
+        return best_H
         
         
 # the name is already speacified ...
@@ -158,17 +158,28 @@ def getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers, max_inlier
 
 
 
-final_H = ransac( xy=xy, dim=template.shape[0:2], tresh_num_inliers=0.50, tresh_dist_inliers = 15) 
+final_H = ransac( xy=xy, dim=template.shape[0:2], tresh_num_inliers=0.75, tresh_dist_inliers = 5) 
 
-# pk.dump(final_H, open('H.p', 'wb'))
+pk.dump(final_H, open('HN2.p', 'wb'))
 
 breakpoint
 
-#final_H = pk.load(open('H6.p', 'rb'))
-img_warp_colored = cv2.warpPerspective(img, final_H, (template.shape[1],template.shape[0]))
+#final_H = pk.load(open('Hn1.p', 'rb'))
+img_warp_colored = cv2.warpPerspective(img, final_H, (int(1*template.shape[1]), int(1*template.shape[0])))
 cv2.imshow('filtered_image', img_warp_colored)
 cv2.waitKey(0)
-cv2.destroyAllWindows()
+
+pk.dump(img_warp_colored, open('frameN2.p', 'wb'))
+
+# img1 = median_2D(img_warp_colored)
+# cv2.imshow('img1', img1)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
+
+H1 = pk.load(open('Hn1.p', 'rb'))
+final_H = final_H@inv(H1)
+pk.dump(final_H, open('HT.p', 'wb'))
+
 
 '''
 
