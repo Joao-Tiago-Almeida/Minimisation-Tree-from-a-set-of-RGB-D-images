@@ -53,9 +53,9 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
             if (frame_counter == 0): homography = getHomography( frame = img,
                                                                  template = template,
                                                                  tresh_num_inliers = 0.50,
-                                                                 tresh_dist_inliers = 1.5,
+                                                                 tresh_dist_inliers = 1.75,
                                                                  max_iterations = 1000,
-                                                                 min_inliers = 30,
+                                                                 min_inliers = 20,
                                                                  debug = DEBUG)
 
             # Get a list when the homography doesn't fulfil the requirements
@@ -84,7 +84,7 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
     print('')
 
     # Storage the Homography with the best found 
-    homography = homography if homography is not None else close_H.copy()
+    homography = homography if homography is not None else close_H
     if homography is None:
         print("Could not find any H matrix ! :( - No output video")
         exit()
@@ -116,7 +116,7 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
             # Actual frame number
             if DEBUG:
                 frame_number+=1
-                print(f'\rComputing new prespective { "."*((frame_number%3)+1) }', end ='')
+                print(f'\rComputing new prespective { "."*((frame_number%7)+1) }', end ='')
 
             # Resize the image and compute an homography
             img = resize(img)
@@ -153,9 +153,8 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
 
     out.release()
 
-'''
+
 template_image = 'templates/templateP2.png'
 moviein_filename = 'videos/simpatico.mp4'
 movieout_filename = moviein_filename.replace(".mp4",".output.mp4")
 part1(template_image,moviein_filename,movieout_filename)
-'''
