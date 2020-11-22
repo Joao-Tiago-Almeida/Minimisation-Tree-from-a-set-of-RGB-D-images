@@ -29,7 +29,7 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
     if DEBUG: gen = infinite_sequence()
     homography = None
     close_H = None
-    ratio_inliers = 0
+    inliers = 0
     frame_counter = 0
 
     # Create a VideoCapture object and read from input file
@@ -46,21 +46,21 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
         if ret == True:
             
             # Actual frame number
-            if DEBUG: print(f'\rComputing homograpgy for frame {next(gen)+1}', end ='')
+            if DEBUG: print(f'\rComputing homography for frame {next(gen)+1}', end ='')
 
             # Resize the image and compute an homography
             img = resize(img)
             if (frame_counter == 0): homography = getHomography( frame = img,
                                                                  template = template,
-                                                                 tresh_num_inliers = 0.50,
-                                                                 tresh_dist_inliers = 1.75,
+                                                                 thresh_num_inliers = 0.5,
+                                                                 thresh_dist_inliers = 6,
                                                                  max_iterations = 1000,
                                                                  min_inliers = 20,
                                                                  debug = DEBUG)
 
             # Get a list when the homography doesn't fulfil the requirements
             if isinstance(homography,list):
-                ratio_inliers, close_H  = tuple(homography) if ratio_inliers < homography[0] else (ratio_inliers, close_H)
+                inliers, close_H  = tuple(homography) if inliers < homography[0] else (inliers, close_H)
                 frame_counter = 1
                 homography = None
 
@@ -81,7 +81,7 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
 
     # When everything done, release the video capture object
     cap.release()
-    print('')
+    if DEBUG: print('\r')
 
     # Storage the Homography with the best found 
     homography = homography if homography is not None else close_H
@@ -94,7 +94,6 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
     width = template.shape[1]
 
     # Auxiliar variables
-    total_frames = next(gen)
     frame_number = 0
 
     # Declare an empty frame to store all the frames
@@ -116,7 +115,7 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
             # Actual frame number
             if DEBUG:
                 frame_number+=1
-                print(f'\rComputing new prespective { "."*((frame_number%7)+1) }', end ='')
+                print(f'\rComputing new perspective { "."*((frame_number%7)+1) }', end ='')
 
             # Resize the image and compute an homography
             img = resize(img)
@@ -132,7 +131,7 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
 
     # When everything done, release the video capture object
     cap.release()
-    print('')
+    if DEBUG: print('')
 
     # Define the codec and create VideoWriter object.The output is stored in movieout_filename.
     # Define the fps to be equal to 24. Also frame size is passed.
@@ -155,6 +154,6 @@ def part1(template_image: str, moviein_filename: str, movieout_filename: str) ->
 
 
 template_image = 'templates/templateP2.png'
-moviein_filename = 'videos/simpatico.mp4'
+moviein_filename = 'videos/nasty.mp4'
 movieout_filename = moviein_filename.replace(".mp4",".output.mp4")
 part1(template_image,moviein_filename,movieout_filename)

@@ -4,19 +4,50 @@ from numpy.linalg import inv
 from random import randrange as rdr
 
 '''
-Manage to find homography that has at least {tresh_num_inliers} inliers.
-It is classified as inlier when its SSE is under than {tresh_dist_inliers} pixels.
+Manage to find homography that has at least {thresh_num_inliers} inliers.
+It is classified as inlier when its SSE is under than {thresh_dist_inliers} pixels.
 '''
-def getHomography(frame: np.array, template: np.array, tresh_num_inliers=0.50, tresh_dist_inliers=5,
+def getHomography(frame: np.array, template: np.array, thresh_num_inliers=0.50, thresh_dist_inliers=5,
                 max_iterations=1000, min_inliers=10, debug=False)  -> ( np.array ):
 
     points = computeMatchPoints( frame, template)
-    homography = ransac( points ,template.shape[0:2], tresh_num_inliers,
-                         tresh_dist_inliers,max_iterations, min_inliers, debug) 
-    return homography
+    homography = ransac( points ,template.shape[0:2], thresh_num_inliers,
+                         thresh_dist_inliers,max_iterations, min_inliers, debug) 
+
+    # Fits the Homography to the inliers
+    H = homography[1]
+    new_homography = computeHomography( getNumInliers( H, points, template.shape[0:2],thresh_dist_inliers, get_num_inliers=False )
+                                                       , is_random=False )
+    
+    # Computes the new percentage
+    inliers =  getNumInliers( new_homography, points, template.shape[0:2],thresh_dist_inliers, get_num_inliers=True )
+
+    if(inliers >= homography[2]):    # the new matrix has more inliers
+            imp = inliers - homography[2]
+            H = new_homography
+
+    else:
+        inliers = homography[2]
+        H = homography[1]
+    
+    percentage = 100*inliers/len(points[0])
+
+    if(homography[0] or percentage >= 100*thresh_num_inliers):  # found a nice H matrix
+
+        if debug:
+            print(f'\nAn Homography which fulfils all the requirements was found :) with {homography[2]} inliers.')
+            if imp >= 0: print(f'The matrix was fitted getting {imp} more point{"" if imp == 1 else "s"}, resulting on a total of {inliers} inliers.')
+            print(f'The final percentage of inliers is {percentage:.1f}% !!')
+
+        return H
+    else:
+        if debug: print(f"\nFound a matrix H with {percentage:.1f}% :( I'll keep trying")
+
+        return [inliers, H]
+
 
 '''
-Run SIFT algoritm
+Run SIFT algorithm
 '''
 def findFeatures( frame: np.array ) -> ( tuple ):
     sift = cv2.SIFT_create()
@@ -24,7 +55,7 @@ def findFeatures( frame: np.array ) -> ( tuple ):
     return (keypoints, descriptors )
 
 '''
-Compute macth points
+Compute match points
 '''
 def computeMatchPoints( frame: np.array, template: np.array ) -> ( list ):
 
@@ -47,7 +78,7 @@ def computeMatchPoints( frame: np.array, template: np.array ) -> ( list ):
 '''
 Compute Homography
 '''
-def computeHomography( xy: list ) -> ( np.array ):
+def computeHomography( xy: list, is_random: bool ) -> ( np.array ):
 
     x = 0   # xx coordinate
     y = 1   # yy coordinate
@@ -58,12 +89,16 @@ def computeHomography( xy: list ) -> ( np.array ):
     A = []
     B = []
 
-    # Uses 4 points because the homograpgy has 8 degrees of freedom 
-    for i in range(4):
+    # Uses 4 points because the homography has 8 degrees of freedom 
+    loop = 4 if is_random else len(xy[0])
+    for i in range(loop):
 
-        # Get random points
-        random_point = rdr( 0, len( xy[frame] ) )
-        random_point = (xy[frame][random_point],xy[template][random_point])
+        if is_random:   # Get random points
+            random_point = rdr( 0, len( xy[frame] ) )
+            random_point = (xy[frame][random_point],xy[template][random_point])
+        else:   # iterates for all points
+            random_point = [xy[0][i], xy[1][i]]
+
         x_frame = random_point[frame][x]
         y_frame = random_point[frame][y]
         x_template = random_point[template][x]
@@ -93,21 +128,21 @@ def computeHomography( xy: list ) -> ( np.array ):
     return H
 
 '''
-Run Ransac Algoritm
+Run Ransac Algorithm
 '''
-def ransac( xy, dim, tresh_num_inliers, tresh_dist_inliers, max_iterations, min_inliers, debug ) -> ( np.array ):
+def ransac( xy, dim, thresh_num_inliers, thresh_dist_inliers, max_iterations, min_inliers, debug ) -> ( np.array ):
 
     max_inliers = 0
     H_best = None
-    # Run the algoritm {max_iterations} times
+    # Run the algorithm {max_iterations} times
     for i in range(max_iterations):
         num_inliers = 0
 
         # get homography matrix
-        H = computeHomography( xy )
+        H = computeHomography( xy, is_random=True )
         
-        try: num_inliers = getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers )
-        except: pass    # Sometimes A is a singluar matrix and H can not be found
+        try: num_inliers = getNumInliers( H, xy, dim, thresh_dist_inliers, get_num_inliers=True )
+        except: pass    # Sometimes A is a singular matrix and H can not be found
 
         # Need at least {min_inliers} points
         if num_inliers < min_inliers:
@@ -115,23 +150,22 @@ def ransac( xy, dim, tresh_num_inliers, tresh_dist_inliers, max_iterations, min_
 
         max_inliers, H_best = ( num_inliers, H)  if num_inliers > max_inliers else (max_inliers, H_best)
 
-        if max_inliers >= tresh_num_inliers*len(xy[0]): # if we get at least tresh_dist_inliers% of inlier points
-            if debug: print(f'\nAn Homography which fulfil all the requirements was found :)')
-            return H_best
+        if max_inliers >= thresh_num_inliers*len(xy[0]): # if we get at least thresh_dist_inliers% of inlier points
+            
+            return [True, H_best, max_inliers]
 
     else:   # can´t find H
-        percentage = max_inliers/len(xy[0])
-        if debug: print(f'\nFound a matrix H with {100*percentage:.1f}% inliers')
-        return [percentage, H_best]
+        return [False, H_best, max_inliers]
         
 '''
 Computes the number of inliers
 '''
-def getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers ) -> ( int ):
+def getNumInliers( H, xy, dim ,thresh_dist_inliers, get_num_inliers ) -> ( int ):
     
     x = 0   # xx coordinate
     y = 1   # yy coordinate
     num_inliers = 0
+    inliers = [[],[]]
 
     distance_points = lambda x1, x2: np.hypot( x1[0] - x2[0], x1[1] - x2[1] )
 
@@ -149,7 +183,6 @@ def getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers ) -> ( int 
 
         # Outside the template
         if ( (u < 0) or (u >= dim[1]) or (v < 0) or (v >= dim[0]) ):
-            breakpoint
             continue
 
         point_template_projective = np.array( [ u, v ] )
@@ -157,10 +190,13 @@ def getNumInliers( H, xy, dim, tresh_num_inliers ,tresh_dist_inliers ) -> ( int 
         # Geometric distance
         sse = distance_points(point_template_projective, point_template)
         # In/Out lier, decision
-        if sse < tresh_dist_inliers:
+        if sse < thresh_dist_inliers:
             num_inliers += 1
+            if not get_num_inliers:
+                inliers[0].append(point_video)
+                inliers[1].append(point_template)
         
-    return num_inliers
+    return num_inliers if get_num_inliers else inliers
 
 '''
 Generate a discret sequence
