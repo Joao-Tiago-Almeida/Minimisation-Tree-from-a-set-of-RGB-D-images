@@ -1,0 +1,229 @@
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from random import randrange as rdr
+
+
+def transformation2cameras( camera: tuple ) -> ( np.array ):
+    """
+    computes the transformation matrix between 2 cameras [RT]
+
+    return row matrix with 12 values. 
+    """
+
+    rgb1 = camera[0]
+    rgb2 = camera[1]
+    dep1 = camera[2]
+    dep2 = camera[3]
+    k_rgb = camera[4]
+    k_depth = camera[5]
+    r_depth2rgb = camera[6]
+    t_depth2rgb = camera[7]
+
+    xy = get_matched_key_points( *get_key_points(rgb1, rgb2) )  # returns the keypoints RGB
+
+    pc_dep1 = generate_depth_pc(dep1, k_depth)
+    pc_dep2 = generate_depth_pc(dep2, k_depth)
+
+    depth_pc_2_rgb_pc = lambda xyz: np.concatenate((r_depth2rgb, t_depth2rgb), axis=1)@np.concatenate( (xyz, np.ones((1, xyz.shape[1]), dtype=float)), axis=0 )
+
+    pc_rgb1 = depth_pc_2_rgb_pc(pc_dep1)
+    pc_rgb2 = depth_pc_2_rgb_pc(pc_dep2)
+
+    pc_new = ransac(pc_rgb1, pc_rgb2, xy, rgb1.shape)
+
+    rgb_pc_to_rgb_img( pc_new, k_rgb, rgb2 )
+
+    #janeiroRalhao(pc_rgb1)
+    #janeiroRalhao(pc_new)
+    #plt.show()
+
+    breakpoint
+
+def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple ) -> ( tuple ):
+
+    num_itr=100
+    percentage_inliers_threshold = 0.5
+    dist_inliers_threshold = 0.2
+
+    # best values
+    r_best = np.empty((3,3))
+    t_best = np.empty((3,1))
+    sse_best = np.Inf
+    pc_try_best = None
+
+    for i in range(num_itr):
+        points = 10 
+
+        points_vect = [[],[]]
+
+        for i in range(points):
+
+            random_point = rdr( 0, len( xy[0] ) )   # bicates 'aleatori' point
+
+            pos_vect = lambda x, y: x*dim[0] + y
+
+            idx_1 = pos_vect( round( xy[0][random_point][0] ), round( xy[0][random_point][1] ) )
+            idx_2 = pos_vect( round( xy[1][random_point][0] ), round( xy[1][random_point][1] ) )
+
+            points_vect[0].append(idx_1)
+            points_vect[1].append(idx_2)        
+
+        r, t = procrustes(pc1[:, points_vect[0]], pc2[:, points_vect[1]]) #pc_rgb1, pc_rgb2
+
+        rigid_transformation = lambda r, t, pc: np.concatenate((r, t), axis=1)@np.concatenate( (pc, np.ones((1, pc.shape[1]), dtype=float)), axis=0 )
+
+        pc_1_try = rigid_transformation(r, t, pc2)
+
+        sse = sum(np.linalg.norm(pc_1_try[:, points_vect[1]]-pc1[:, points_vect[0]], axis = 0))   # shape should be 1*307200
+        
+        if(sse<sse_best):
+            r_best, t_best = (r, t)
+            pc_try_best = pc_1_try
+            sse_best
+
+
+        # if( num_points > percentage_inliers_threshold * pc1.shape[1] ):
+        #     print('O GUI PAGA JOLA, O BACANO')
+        #     print(f"percentage: {100*num_points/pc1.shape[1]:.2f}")
+
+        #     break
+
+    print(r_best)
+    print(t_best)
+
+    return pc_try_best
+
+
+    # janeiroRalhao(pc_1_try)
+    # janeiroRalhao(pc1)
+    # plt.show()
+
+def procrustes(pc1: np.array, pc2: np.array) -> ( tuple ):
+
+    # http://printart.isr.tecnico.ulisboa.pt/piv/project/docs/Registration_explained.pdf
+
+    # setp 1: computes centroids
+
+    centroid_1_vect = np.mean(pc1, axis=1)
+    centroid_2_vect = np.mean(pc2, axis=1)
+
+    # step 2: centers the point clouds
+
+    centroid_1 = pc1 - np.expand_dims(centroid_1_vect, axis=1)
+    centroid_2 = pc2 - np.expand_dims(centroid_2_vect, axis=1)
+
+    # step 3: computes covariance matrix (3x3)
+
+    cov_matrix = centroid_1@centroid_2.T
+
+    # step 4: computes SVD
+
+    u, v = SVD(cov_matrix)
+
+    # step 5: Rotation matrix
+
+    R = u@np.array([[1, 0, 0],
+                    [0, 1, 0 ], 
+                    [0, 0, np.linalg.det(u@v.T)]])
+    
+    # setp 6: Translation vector
+
+    T = centroid_1_vect - R@centroid_2_vect
+
+    return (R, T.reshape(3,1))
+
+def SVD( cov_matrix: np.array ) -> ( tuple ):
+    """
+    Computes the singular value decomposition of cov_matrix
+    https://web.mit.edu/be.400/www/SVD/Singular_Value_Decomposition.htm
+    """
+
+    # computes eigenvectores
+    _, U = np.linalg.eig(cov_matrix@cov_matrix.T)    
+    _, V = np.linalg.eig(cov_matrix.T@cov_matrix)
+
+    return (U, V)
+   
+def generate_depth_pc(dep1, k_depth):
+    """
+    Generates PointCould for the depth image
+    """
+
+    flat = lambda x: np.array(x, dtype=float).flatten('C')
+
+    scale = flat(dep1["depth_array"])/1000
+
+    nx = np.linspace(1, dep1["depth_array"].shape[1], dep1["depth_array"].shape[1], dtype=float)
+    ny = np.linspace(1, dep1["depth_array"].shape[0], dep1["depth_array"].shape[0], dtype=float)
+    [u, v] = np.meshgrid(nx, ny)
+
+    z = np.ones( (scale.shape), dtype=float )
+
+    depth_camera_frame_normalized = np.array([flat(u), flat(v), z])
+
+    depth_camera_frame = np.array([line*scale for line in depth_camera_frame_normalized])
+
+    xyz = np.linalg.inv(k_depth)@depth_camera_frame
+
+    return xyz
+
+def get_key_points(rgb1, rgb2):
+
+    sift = cv2.SIFT_create()
+    keypoints_1, descriptors_1 = sift.detectAndCompute(rgb1, mask = None)
+    keypoints_2, descriptors_2 = sift.detectAndCompute(rgb2, mask = None)
+
+    return (keypoints_1, descriptors_1, keypoints_2, descriptors_2)
+
+def get_matched_key_points(keypoints_1, descriptors_1, keypoints_2, descriptors_2):
+
+    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+
+    matches = bf.match(descriptors_1,descriptors_2)
+
+    xy1 = []
+    xy2 = []
+    for k in matches:
+        xy1.append(keypoints_1[k.queryIdx].pt)
+        xy2.append(keypoints_2[k.trainIdx].pt)
+
+    
+    return [xy1, xy2]
+
+def janeiroRalhao(pc):
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(*pc)
+
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+    plt.draw()
+
+def rgb_pc_to_rgb_img(pc, k, img):
+
+    dim = img.shape
+    
+    rgb_frame = np.linalg.inv(k)@pc
+
+    u = np.divide( rgb_frame[0,:], rgb_frame[2,:] )
+    v = np.divide( rgb_frame[1,:], rgb_frame[2,:] )
+
+    # normalize coordinates
+    u[u<0] = 0
+    u[u>dim[1]] = dim[1]
+    v[v<0] = 0
+    v[v>dim[0]] = dim[0]
+
+    image = np.zeros(dim)
+    img = np.reshape(img, (-1, 3) )
+
+    for i in range( pc.shape[1] ):
+
+        image[ round(v[i]) ][ round(u[i]) ] = img[i]
+
+    cv2.imshow('image',image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
