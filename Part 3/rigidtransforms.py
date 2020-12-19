@@ -14,18 +14,14 @@ with open(sys.argv[1], 'r') as file:
 
     rgbimgs = []
     for img in file.readlines():
-        rgbimgs.append(cv2.imread("./"+img.strip("\n"), cv2.IMREAD_COLOR))
-
-    rgbimgs
+        rgbimgs.append( cv2.imread("./"+img.strip("\n"), cv2.IMREAD_COLOR)) if img.split('.')[-1].strip("\n") != 'mat' else rgbimgs.append(scipy.io.loadmat(img.strip("\n"))["depth_array"] )
 
 # depthimgs.txt
 with open(sys.argv[2], 'r') as file:
 
     depthimgs = []
     for img in file.readlines():
-        depthimgs.append(scipy.io.loadmat(img.strip("\n")))
-
-    depthimgs
+        depthimgs.append( cv2.imread("./"+img.strip("\n"), cv2.IMREAD_GRAYSCALE)) if img.split('.')[-1].strip("\n") != 'mat' else depthimgs.append(scipy.io.loadmat(img.strip("\n"))["depth_array"] )
 
 # cameracalib.txt
 with open(sys.argv[3], 'r') as calib:

@@ -2,6 +2,9 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from random import randrange as rdr
+from scipy.io import savemat
+
+from scipy.spatial import procrustes
 
 
 def transformation2cameras( camera: tuple ) -> ( np.array ):
@@ -25,18 +28,16 @@ def transformation2cameras( camera: tuple ) -> ( np.array ):
     pc_dep1 = generate_depth_pc(dep1, k_depth)
     pc_dep2 = generate_depth_pc(dep2, k_depth)
 
-    depth_pc_2_rgb_pc = lambda xyz: np.concatenate((r_depth2rgb, t_depth2rgb), axis=1)@np.concatenate( (xyz, np.ones((1, xyz.shape[1]), dtype=float)), axis=0 )
+    depth_pc_2_rgb_pc = lambda xyz: np.concatenate( (r_depth2rgb, t_depth2rgb), axis=1)@np.concatenate( (xyz, np.ones((1, xyz.shape[1]), dtype=float) ), axis=0 )
 
     pc_rgb1 = depth_pc_2_rgb_pc(pc_dep1)
     pc_rgb2 = depth_pc_2_rgb_pc(pc_dep2)
 
     pc_new = ransac(pc_rgb1, pc_rgb2, xy, rgb1.shape)
 
-    rgb_pc_to_rgb_img( pc_new, k_rgb, rgb2 )
+    pc_in_matlab( (pc_rgb1, pc_new), ('pc1', 'pc2') )
 
-    #janeiroRalhao(pc_rgb1)
-    #janeiroRalhao(pc_new)
-    #plt.show()
+    rgb_pc_to_rgb_img( pc_new, k_rgb, rgb2 )
 
     breakpoint
 
@@ -47,61 +48,75 @@ def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple ) -> ( tuple ):
     dist_inliers_threshold = 0.2
 
     # best values
-    r_best = np.empty((3,3))
-    t_best = np.empty((3,1))
+    r_best = np.zeros((3,3))
+    t_best = np.zeros((3,1))
     sse_best = np.Inf
     pc_try_best = None
+    max_inliers = 0
+
+
+    pos_vect = lambda x, y: round(x)*dim[0] + round(y)
+    rigid_transformation = lambda r, t, pc: np.concatenate((r, t), axis=1)@np.concatenate( (pc, np.ones((1, pc.shape[1]), dtype=float)), axis=0 )
 
     for i in range(num_itr):
-        points = 10 
 
+        points = 4
         points_vect = [[],[]]
 
         for i in range(points):
 
             random_point = rdr( 0, len( xy[0] ) )   # bicates 'aleatori' point
 
-            pos_vect = lambda x, y: x*dim[0] + y
-
-            idx_1 = pos_vect( round( xy[0][random_point][0] ), round( xy[0][random_point][1] ) )
-            idx_2 = pos_vect( round( xy[1][random_point][0] ), round( xy[1][random_point][1] ) )
+            idx_1 = pos_vect( *xy[0][random_point] )
+            idx_2 = pos_vect( *xy[1][random_point] )
 
             points_vect[0].append(idx_1)
             points_vect[1].append(idx_2)        
 
-        r, t = procrustes(pc1[:, points_vect[0]], pc2[:, points_vect[1]]) #pc_rgb1, pc_rgb2
-
-        rigid_transformation = lambda r, t, pc: np.concatenate((r, t), axis=1)@np.concatenate( (pc, np.ones((1, pc.shape[1]), dtype=float)), axis=0 )
+        r, t = procrustes_nosso(pc1[:, points_vect[0]], pc2[:, points_vect[1]]) #pc_rgb1, pc_rgb2
+        #r,t = batota(pc1[:, points_vect[0]], pc2[:, points_vect[1]]) #pc_rgb1, pc_rgb2
 
         pc_1_try = rigid_transformation(r, t, pc2)
 
-        sse = sum(np.linalg.norm(pc_1_try[:, points_vect[1]]-pc1[:, points_vect[0]], axis = 0))   # shape should be 1*307200
-        
-        if(sse<sse_best):
+        #sse = sum( np.linalg.norm( pc_1_try[:, points_vect[1]]-pc1[:, points_vect[0]], axis = 0 ) )   # shape should be 1*307200
+        for pt in range(len(xy[0])):
+            num_inliers = 0
+            sse = np.linalg.norm( pc_1_try[:, pos_vect( *xy[0][pt]) ] - pc1[:, pos_vect( *xy[1][pt]) ], axis = 0 )
+
+            if sse < dist_inliers_threshold:
+                num_inliers+=1
+
+        if(num_inliers > percentage_inliers_threshold*len(xy[0])):
+            print('Found a nice [RT] !! :)')
             r_best, t_best = (r, t)
             pc_try_best = pc_1_try
-            sse_best
+            break
 
+        elif(max_inliers < num_inliers):
 
-        # if( num_points > percentage_inliers_threshold * pc1.shape[1] ):
-        #     print('O GUI PAGA JOLA, O BACANO')
-        #     print(f"percentage: {100*num_points/pc1.shape[1]:.2f}")
+            r_best, t_best = (r, t)
+            pc_try_best = pc_1_try
 
-        #     break
+    else:
+        r_best, t_best = (r, t)
+        pc_try_best = pc_1_try
 
     print(r_best)
     print(t_best)
 
     return pc_try_best
 
-
-    # janeiroRalhao(pc_1_try)
-    # janeiroRalhao(pc1)
-    # plt.show()
-
-def procrustes(pc1: np.array, pc2: np.array) -> ( tuple ):
+def procrustes_nosso(pc1: np.array, pc2: np.array) -> ( tuple ):
 
     # http://printart.isr.tecnico.ulisboa.pt/piv/project/docs/Registration_explained.pdf
+
+    pc1 = np.array([ [0,0,0], [1,1,1], [2,1,0],[1,2,0] ]).T
+    pc2 = np.array([ [0,2,3], [1,3,2], [2,2,2],[1,2,1] ]).T
+
+    '''
+    RR = np.array([ [1,0,0], [0,0,1], [0,-1,0] ])
+    TT = np.array([ [0,2,3] ])
+    '''
 
     # setp 1: computes centroids
 
@@ -119,19 +134,23 @@ def procrustes(pc1: np.array, pc2: np.array) -> ( tuple ):
 
     # step 4: computes SVD
 
-    u, v = SVD(cov_matrix)
+    # u, v = SVD(cov_matrix)
+    u, h, v = np.linalg.svd(cov_matrix)
 
     # step 5: Rotation matrix
 
     R = u@np.array([[1, 0, 0],
                     [0, 1, 0 ], 
-                    [0, 0, np.linalg.det(u@v.T)]])
+                    [0, 0, np.linalg.det(u@v)]])@v
     
     # setp 6: Translation vector
 
-    T = centroid_1_vect - R@centroid_2_vect
+    T = centroid_1_vect - R.T@centroid_2_vect
+
+    aa = R@pc1 + T.reshape(3,1)
 
     return (R, T.reshape(3,1))
+
 
 def SVD( cov_matrix: np.array ) -> ( tuple ):
     """
@@ -141,7 +160,11 @@ def SVD( cov_matrix: np.array ) -> ( tuple ):
 
     # computes eigenvectores
     _, U = np.linalg.eig(cov_matrix@cov_matrix.T)    
-    _, V = np.linalg.eig(cov_matrix.T@cov_matrix)
+    a, V = np.linalg.eig(cov_matrix.T@cov_matrix)
+
+
+    c = U@np.diag(np.sqrt(a)@V.T)
+    
 
     return (U, V)
    
@@ -152,10 +175,10 @@ def generate_depth_pc(dep1, k_depth):
 
     flat = lambda x: np.array(x, dtype=float).flatten('C')
 
-    scale = flat(dep1["depth_array"])/1000
+    scale = flat(dep1)/1000
 
-    nx = np.linspace(1, dep1["depth_array"].shape[1], dep1["depth_array"].shape[1], dtype=float)
-    ny = np.linspace(1, dep1["depth_array"].shape[0], dep1["depth_array"].shape[0], dtype=float)
+    nx = np.linspace(1, dep1.shape[1], dep1.shape[1], dtype=float)
+    ny = np.linspace(1, dep1.shape[0], dep1.shape[0], dtype=float)
     [u, v] = np.meshgrid(nx, ny)
 
     z = np.ones( (scale.shape), dtype=float )
@@ -191,39 +214,56 @@ def get_matched_key_points(keypoints_1, descriptors_1, keypoints_2, descriptors_
     
     return [xy1, xy2]
 
-def janeiroRalhao(pc):
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(*pc)
-
-    ax.set_xlabel('X Label')
-    ax.set_ylabel('Y Label')
-    ax.set_zlabel('Z Label')
-    plt.draw()
+'''
+Saves a matrix in mat format
+'''
+pc_in_matlab = lambda pc, name='pc': savemat( "pointcloud.mat", dict(zip(name, pc)) )
 
 def rgb_pc_to_rgb_img(pc, k, img):
 
     dim = img.shape
     
-    rgb_frame = np.linalg.inv(k)@pc
+    # rgb_frame = np.linalg.inv(k)@pc
+    rgb_frame = k@pc
 
     u = np.divide( rgb_frame[0,:], rgb_frame[2,:] )
     v = np.divide( rgb_frame[1,:], rgb_frame[2,:] )
 
     # normalize coordinates
-    u[u<0] = 0
-    u[u>dim[1]] = dim[1]
-    v[v<0] = 0
-    v[v>dim[0]] = dim[0]
+    u[ u < 0 ] = 0
+    u[u > dim[1]-1] = dim[1]-1
 
-    image = np.zeros(dim)
-    img = np.reshape(img, (-1, 3) )
+    v[ v < 0 ] = 0
+    v[ v > dim[0]-1 ] = dim[0]-1
+
+    image = np.zeros(dim, dtype='uint8')
+    img_ = np.reshape(img, (-1, 3) )
 
     for i in range( pc.shape[1] ):
+    
+        image[ round(v[i]) ][ round(u[i]) ] = img_[i]
 
-        image[ round(v[i]) ][ round(u[i]) ] = img[i]
-
+    cv2.imshow('original',img)
     cv2.imshow('image',image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+
+# página 3 do ficheiro, Part final
+def batota(pc1, pc2):
+
+    B = pc2;
+    _, A, _ = procrustes(pc1, pc2)
+
+    C = np.concatenate( (B, np.ones((1, B.shape[1]), dtype=float)) ).T
+
+    try:
+        RT = ( np.linalg.inv(C.T @ C) @ C.T @ A.T ).T
+    except:
+        return (np.zeros((3,3)), np.zeros((3,1)))
+
+    r = RT[:,:3]
+    t = RT[:,3:]
+
+    return (r,t)
+    

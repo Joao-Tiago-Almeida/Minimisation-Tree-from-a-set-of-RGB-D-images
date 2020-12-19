@@ -1,0 +1,12 @@
+clear 
+
+load pointcloud.mat
+myvals = whos;
+pcs = ;%zeros(length(myvals), 1)
+
+
+
+for n = 1:length(myvals)
+      myvals(n).name;
+      %eval(myvals(n).name)
+end
