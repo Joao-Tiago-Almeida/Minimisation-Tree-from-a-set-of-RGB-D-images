@@ -32,17 +32,17 @@ def transformation2cameras( camera: tuple ) -> ( np.array ):
     pc_rgb1 = depth_pc_2_rgb_pc(pc_dep1)
     pc_rgb2 = depth_pc_2_rgb_pc(pc_dep2)
 
-    pc_new = ransac(pc_rgb1, pc_rgb2, xy, rgb1.shape)
+    pc_new, r, t = ransac(pc_rgb1, pc_rgb2, xy, rgb1.shape)
 
     pc_in_matlab( (pc_rgb1, pc_new), ('PC1', 'PC2') )
 
-    rgb_pc_to_rgb_img( pc_new, k_rgb, rgb2, rgb1 )
+    rgb_pc_to_rgb_img( pc_new, k_rgb, rgb2, rgb1, r, t )
 
     breakpoint
 
 def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple ) -> ( tuple ):
 
-    num_itr=1000
+    num_itr=2000
     percentage_inliers_threshold = 0.5  # percentage
     dist_inliers_threshold = 0.2    # meters
 
@@ -88,6 +88,7 @@ def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple ) -> ( tuple ):
             print('Found a nice [RT] !! :)')
             r_best, t_best = (r, t)
             pc_try_best = pc_1_try
+            max_inliers = num_inliers
             break
 
         elif(max_inliers < num_inliers):
@@ -100,7 +101,7 @@ def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple ) -> ( tuple ):
     print(t_best)
     print(f'Number of inliers {max_inliers}')
 
-    return pc_try_best
+    return ( pc_try_best, r_best, t_best )
 
 def procrustes(pc1: np.array, pc2: np.array) -> ( tuple ):
 
@@ -142,7 +143,6 @@ def procrustes(pc1: np.array, pc2: np.array) -> ( tuple ):
     T = centroid_1_vect - R@centroid_2_vect
 
     return (R, T.reshape(3,1))
-
 
 # pay attention because the eigenvectores are auto sign-normalized
 def SVD( cov_matrix: np.array ) -> ( tuple ):
@@ -208,7 +208,7 @@ Saves a matrix in mat format
 '''
 pc_in_matlab = lambda pc, name='pc': savemat( "pointcloud.mat", dict(zip(name, pc)) )
 
-def rgb_pc_to_rgb_img(pc, k, img, img2):
+def rgb_pc_to_rgb_img(pc, k, img1, img, r, t):
 
     dim = img.shape
     
@@ -231,9 +231,10 @@ def rgb_pc_to_rgb_img(pc, k, img, img2):
     
         image[ round(v[i]) ][ round(u[i]) ] = img_[i]
 
-    cv2.imshow('original',img2)
-    cv2.imshow('original2',img)
-    cv2.imshow('image',image)
+
+    cv2.imshow('imagem 1',img)
+    cv2.imshow('imagem 2',img1)
+    cv2.imshow('pata',image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
