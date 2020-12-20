@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from random import randrange as rdr
 from scipy.io import savemat
 
-from scipy.spatial import procrustes
 
 
 def transformation2cameras( camera: tuple ) -> ( np.array ):
@@ -35,28 +34,29 @@ def transformation2cameras( camera: tuple ) -> ( np.array ):
 
     pc_new = ransac(pc_rgb1, pc_rgb2, xy, rgb1.shape)
 
-    pc_in_matlab( (pc_rgb1, pc_new), ('pc1', 'pc2') )
+    pc_in_matlab( (pc_rgb1, pc_new), ('PC1', 'PC2') )
 
-    rgb_pc_to_rgb_img( pc_new, k_rgb, rgb2 )
+    rgb_pc_to_rgb_img( pc_new, k_rgb, rgb2, rgb1 )
 
     breakpoint
 
 def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple ) -> ( tuple ):
 
-    num_itr=100
-    percentage_inliers_threshold = 0.5
-    dist_inliers_threshold = 0.2
+    num_itr=1000
+    percentage_inliers_threshold = 0.5  # percentage
+    dist_inliers_threshold = 0.2    # meters
 
     # best values
-    r_best = np.zeros((3,3))
-    t_best = np.zeros((3,1))
+    r_best = np.zeros((3,3), dtype=float)
+    t_best = np.zeros((3,1), dtype=float)
     sse_best = np.Inf
     pc_try_best = None
     max_inliers = 0
 
 
     pos_vect = lambda x, y: round(x)*dim[0] + round(y)
-    rigid_transformation = lambda r, t, pc: np.concatenate((r, t), axis=1)@np.concatenate( (pc, np.ones((1, pc.shape[1]), dtype=float)), axis=0 )
+    #rigid_transformation = lambda r, t, pc: np.concatenate((r, t), axis=1)@np.concatenate( (pc, np.ones((1, pc.shape[1]), dtype=float)), axis=0 )
+    rigid_transformation = lambda r, t, pc: r@pc + t
 
     for i in range(num_itr):
 
@@ -73,15 +73,13 @@ def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple ) -> ( tuple ):
             points_vect[0].append(idx_1)
             points_vect[1].append(idx_2)        
 
-        r, t = procrustes_nosso(pc1[:, points_vect[0]], pc2[:, points_vect[1]]) #pc_rgb1, pc_rgb2
-        #r,t = batota(pc1[:, points_vect[0]], pc2[:, points_vect[1]]) #pc_rgb1, pc_rgb2
+        r, t = procrustes(pc1[:, points_vect[0]], pc2[:, points_vect[1]]) #pc_rgb1, pc_rgb2
 
         pc_1_try = rigid_transformation(r, t, pc2)
 
-        #sse = sum( np.linalg.norm( pc_1_try[:, points_vect[1]]-pc1[:, points_vect[0]], axis = 0 ) )   # shape should be 1*307200
+        num_inliers = 0
         for pt in range(len(xy[0])):
-            num_inliers = 0
-            sse = np.linalg.norm( pc_1_try[:, pos_vect( *xy[0][pt]) ] - pc1[:, pos_vect( *xy[1][pt]) ], axis = 0 )
+            sse = np.linalg.norm( pc1[:, pos_vect( *xy[0][pt]) ] - pc_1_try[:, pos_vect( *xy[0][pt]) ], axis = 0 )
 
             if sse < dist_inliers_threshold:
                 num_inliers+=1
@@ -93,27 +91,23 @@ def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple ) -> ( tuple ):
             break
 
         elif(max_inliers < num_inliers):
-
+            
+            max_inliers = num_inliers
             r_best, t_best = (r, t)
             pc_try_best = pc_1_try
 
-    else:
-        r_best, t_best = (r, t)
-        pc_try_best = pc_1_try
-
     print(r_best)
     print(t_best)
+    print(f'Number of inliers {max_inliers}')
 
     return pc_try_best
 
-def procrustes_nosso(pc1: np.array, pc2: np.array) -> ( tuple ):
+def procrustes(pc1: np.array, pc2: np.array) -> ( tuple ):
 
     # http://printart.isr.tecnico.ulisboa.pt/piv/project/docs/Registration_explained.pdf
-
-    pc1 = np.array([ [0,0,0], [1,1,1], [2,1,0],[1,2,0] ]).T
-    pc2 = np.array([ [0,2,3], [1,3,2], [2,2,2],[1,2,1] ]).T
-
     '''
+    pc2 = np.array([ [0,0,0], [1,1,1], [2,1,0],[1,2,0] ]).T
+    pc1 = np.array([ [0,2,3], [1,3,2], [2,2,2],[1,2,1] ]).T
     RR = np.array([ [1,0,0], [0,0,1], [0,-1,0] ])
     TT = np.array([ [0,2,3] ])
     '''
@@ -134,7 +128,7 @@ def procrustes_nosso(pc1: np.array, pc2: np.array) -> ( tuple ):
 
     # step 4: computes SVD
 
-    # u, v = SVD(cov_matrix)
+    #U, V = SVD(cov_matrix)
     u, h, v = np.linalg.svd(cov_matrix)
 
     # step 5: Rotation matrix
@@ -145,13 +139,12 @@ def procrustes_nosso(pc1: np.array, pc2: np.array) -> ( tuple ):
     
     # setp 6: Translation vector
 
-    T = centroid_1_vect - R.T@centroid_2_vect
-
-    aa = R@pc1 + T.reshape(3,1)
+    T = centroid_1_vect - R@centroid_2_vect
 
     return (R, T.reshape(3,1))
 
 
+# pay attention because the eigenvectores are auto sign-normalized
 def SVD( cov_matrix: np.array ) -> ( tuple ):
     """
     Computes the singular value decomposition of cov_matrix
@@ -159,14 +152,10 @@ def SVD( cov_matrix: np.array ) -> ( tuple ):
     """
 
     # computes eigenvectores
-    _, U = np.linalg.eig(cov_matrix@cov_matrix.T)    
-    a, V = np.linalg.eig(cov_matrix.T@cov_matrix)
-
-
-    c = U@np.diag(np.sqrt(a)@V.T)
+    _, U = np.linalg.eig(cov_matrix@cov_matrix.T)
+    _, V = np.linalg.eig(cov_matrix.T@cov_matrix)
     
-
-    return (U, V)
+    return (U, V.T)
    
 def generate_depth_pc(dep1, k_depth):
     """
@@ -219,11 +208,10 @@ Saves a matrix in mat format
 '''
 pc_in_matlab = lambda pc, name='pc': savemat( "pointcloud.mat", dict(zip(name, pc)) )
 
-def rgb_pc_to_rgb_img(pc, k, img):
+def rgb_pc_to_rgb_img(pc, k, img, img2):
 
     dim = img.shape
     
-    # rgb_frame = np.linalg.inv(k)@pc
     rgb_frame = k@pc
 
     u = np.divide( rgb_frame[0,:], rgb_frame[2,:] )
@@ -243,27 +231,9 @@ def rgb_pc_to_rgb_img(pc, k, img):
     
         image[ round(v[i]) ][ round(u[i]) ] = img_[i]
 
-    cv2.imshow('original',img)
+    cv2.imshow('original',img2)
+    cv2.imshow('original2',img)
     cv2.imshow('image',image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-
-# página 3 do ficheiro, Part final
-def batota(pc1, pc2):
-
-    B = pc2;
-    _, A, _ = procrustes(pc1, pc2)
-
-    C = np.concatenate( (B, np.ones((1, B.shape[1]), dtype=float)) ).T
-
-    try:
-        RT = ( np.linalg.inv(C.T @ C) @ C.T @ A.T ).T
-    except:
-        return (np.zeros((3,3)), np.zeros((3,1)))
-
-    r = RT[:,:3]
-    t = RT[:,3:]
-
-    return (r,t)
-    
