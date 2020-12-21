@@ -153,7 +153,6 @@ def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple, percentage_inlie
             pc_try_best = pc_1_try
             max_inliers_tuned = max(num_inliers_tuned, max_inliers_tuned)
 
-
     print(f'Number of inliers ransac {max_inliers}', end='\t >> \t')
 
     has_tuned = '\t:(' if max_inliers_tuned < max_inliers else ':)\t'
