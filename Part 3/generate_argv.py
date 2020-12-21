@@ -1,29 +1,31 @@
 import os
 
-def load_images_from_folder(folder, filetxt, extension):
+def load_images_from_folder(folder):
 
-    f=open(filetxt, 'w')
+    filetxt = ('rgbimgs.txt', 'depthimgs.txt')
+    directory = ('rgb', 'depth')
+    extension = ('png', 'jpeg', 'mat')
 
-    images = []
-    for filename in os.listdir(folder):
-        if(filename[-3:]==extension):
-            images.append(f'{folder}/{filename}\n')
+    for txt_, dir_ in zip(filetxt, directory):
+
+        f = open(txt_, 'w')
+        images = []
+
+        for filename in os.listdir(f'{folder}/{dir_}'):
+
+            if(filename.split('.')[-1].lower() in extension):
+                images.append(f'{folder}/{dir_}/{filename}\n')
     
 
-    images.sort(key = lambda filename : int(filename.split('_')[-1].split('.')[0]))
+        images.sort(key = lambda filename : int(filename.split('/')[-1].split('_')[-1].split('.')[0]))
 
-    for file in images:
-        f.write(file)
-    f.close()
+        for file in images:
+            f.write(file)
 
-    return images
+        f.close()
 
-folder = "rbg_image"
-rgb_filename = 'rgbimgs.txt'
 
-load_images_from_folder(folder, rgb_filename, 'png')
 
-folder = "depth_imgs"
-depth_filename = 'depthimgs.txt'
+folder = "office"
 
-load_images_from_folder(folder, depth_filename, 'mat')
+load_images_from_folder(folder)
