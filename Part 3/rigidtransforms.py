@@ -39,11 +39,22 @@ with open(sys.argv[4], 'r') as file:
     path_file_name_output = file.readline()
 
 RT = []
+R_last = np.eye(3)
+T_last = np.zeros((3, 1))
 
-for i in range( len( rgbimgs ) - 1 ):
+
+for i in range( len( rgbimgs )-1 ):
+    fix = i+1
+    if(i==fix): continue
     print(f'Computing RT ... {(i+1)}/{len(rgbimgs)-1}', end='\t -> \t', flush=True)
-    camera = ( rgbimgs[i], rgbimgs[i+1], depthimgs[i], depthimgs[i+1], k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
-    R, T = transformation2cameras(camera, i, i+1)
+    camera = ( rgbimgs[i], rgbimgs[fix], depthimgs[i], depthimgs[fix], k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
+    R, T = transformation2cameras(camera, fix, i)
+
+    # # computes the rigid transformation to the world frame (1st image)
+    # R = R @ R_last
+    # T = T + T_last
+    # R_last, T_last = R, T
+
     RT.append( np.concatenate( (R, T.T), axis=0).flatten() )
 
 np.savetxt(fname=path_file_name_output, 
@@ -53,6 +64,8 @@ np.savetxt(fname=path_file_name_output,
 
 try:    os.remove("point_clouds.p")
 except: pass
+
+
 
 # camera = ( rgbimgs[1], rgbimgs[2], depthimgs[1], depthimgs[2], k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
 # R, T = transformation2cameras(camera, 1, 2)

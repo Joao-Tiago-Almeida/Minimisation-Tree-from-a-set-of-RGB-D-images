@@ -25,7 +25,6 @@ def load_images_from_folder(folder):
         f.close()
 
 
-
 folder = "office"
 
 load_images_from_folder(folder)
