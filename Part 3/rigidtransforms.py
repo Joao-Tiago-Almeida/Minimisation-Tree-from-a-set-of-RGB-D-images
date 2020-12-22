@@ -39,32 +39,31 @@ with open(sys.argv[4], 'r') as file:
     
     path_file_name_output = file.readline()
 
-# RT = []
-# for i in range( len( rgbimgs )-1 ):
-#     fix = i+1
-#     if(i==fix): continue
-#     print(f'Computing RT ... {(i+1)}/{len(rgbimgs)-1}', end='\t -> \t', flush=True)
-#     camera = ( rgbimgs[i], rgbimgs[fix], depthimgs[i], depthimgs[fix], k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
-#     R, T = transformation2cameras(camera, fix, i)
 
-#     RT.append( np.concatenate( (R, T.T), axis=0).flatten() )
+if len(rgbimgs) != len(depthimgs):
+    print(f"The number of RGB ({len(rgbimgs)}) and Depth ({len(depthimgs)}) are different.")
+    exit()
+
+try:    os.remove("point_clouds.p")
+except: pass
+
+#RT = []
+#for i in range( len( rgbimgs )-1 ):
+#    fix = i+1
+#    if(i==fix): continue
+#    print(f'Computing RT ... {(i+1)}/{len(rgbimgs)-1}', end='\t -> \t', flush=True)
+#camera = ( rgbimgs[0], rgbimgs[1], depthimgs[0], depthimgs[1], k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
+#R, T, _ = transformation2cameras(camera, 1, 0)
+
+#    RT.append( np.concatenate( (R, T.T), axis=0).flatten() )
 
 # np.savetxt(fname=path_file_name_output, 
 #             X=RT,
 #             delimiter='\t',
 #             newline='\n')
 
-# try:    os.remove("point_clouds.p")
-# except: pass
-
-# camera = ( rgbimgs, depthimgs, k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
-# build_graph(camera)
-
-
-
-# camera = ( rgbimgs[1], rgbimgs[2], depthimgs[1], depthimgs[2], k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
-# R, T = transformation2cameras(camera, 1, 2)
-
+camera = ( rgbimgs, depthimgs, k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
+build_graph(camera)
 
 file = open( "rt_graph.p", "rb" )
 dict_pc = pk.load( file )
@@ -76,6 +75,7 @@ keys_dict = list(dict_pc.keys())
 keys_dict.sort()
 
 for i in keys_dict:
+    if(i==0): continue
     R_total = np.identity(3)
     T_total = np.zeros((3,1))
     parent = i

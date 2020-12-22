@@ -6,7 +6,7 @@ from scipy.io import savemat
 import pickle as pk
 
 
-def transformation2cameras( camera: tuple, pc1_file: int = 0, pc2_file: int = 1 ) -> ( tuple ):
+def transformation2cameras( camera: tuple, pc1_file: int = 0, pc2_file: int = 1, force: bool = False) -> ( tuple ):
     """
     computes the transformation matrix between 2 cameras [RT]
 
@@ -28,7 +28,7 @@ def transformation2cameras( camera: tuple, pc1_file: int = 0, pc2_file: int = 1 
     
     try:
         file = open( "point_clouds.p", "xb" )
-        dict_pc = dict.fromkeys(range(0, 2))
+        dict_pc = {}
     except:
         file = open( "point_clouds.p", "rb" )
         dict_pc = pk.load( file )
@@ -56,12 +56,12 @@ def transformation2cameras( camera: tuple, pc1_file: int = 0, pc2_file: int = 1 
     with open( "point_clouds.p", "wb" ) as file:
         pk.dump( dict_pc, file, protocol=pk.HIGHEST_PROTOCOL )
 
-    if( len(xy[0]) ) < int(rgb1.shape[0] * rgb1.shape[1] * 0.001):
+    if( ( len(xy[0]) ) < int(rgb1.shape[0] * rgb1.shape[1] * 0.001) ) and ( not force ):
         return ( None, None, 0 )
 
     r, t, ratio_inliers, pc_new = ransac(pc_rgb1, pc_rgb2, xy, rgb1.shape)
 
-    pc_in_matlab( (pc_rgb1, pc_new), (rgb1, rgb1), ('PC1', 'PC2') )
+    pc_in_matlab( (pc_rgb1, pc_rgb2), (rgb1, rgb1), ('PC1', 'PC2') )
 
     #rgb_pc_to_rgb_img( pc_new, k_rgb, rgb1 )  #remove
 
@@ -159,7 +159,7 @@ def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple, percentage_inlie
 
     print(f'Number of inliers ransac {max_inliers}', end='\t >> \t')
 
-    has_tuned = '\t:(' if max_inliers_tuned == max_inliers else ':)\t'
+    has_tuned = '\t:)' if max_inliers_tuned == max_inliers else ':(\t'
 
     print(f'Tuning: {max_inliers_tuned}\t{has_tuned}\t{"[ *** Found a nice [RT] !! :) *** ]" if already_nice_rt else ""}\t', flush=True)
 
@@ -326,8 +326,8 @@ def rgb_pc_to_rgb_img(pc, k, img):
         image[ round(v[i]) ][ round(u[i]) ] = img_[i]
 
 
-    cv2.imshow('imagem 1',img)
-    cv2.imshow('pata',image)
+    cv2.imshow('original',img)
+    cv2.imshow('reconstruct',image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 

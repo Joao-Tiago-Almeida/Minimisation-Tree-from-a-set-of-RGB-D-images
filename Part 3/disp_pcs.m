@@ -1,8 +1,8 @@
-clear 
-close all
-clc
+% clear 
+% close all
+% clc
 
-load pointcloud.mat
+load('pointcloud.mat')
 myvals = whos;
 
 fig = figure(1);

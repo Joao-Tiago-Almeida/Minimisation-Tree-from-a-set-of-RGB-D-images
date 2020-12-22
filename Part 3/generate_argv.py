@@ -4,7 +4,7 @@ def load_images_from_folder(folder):
 
     filetxt = ('rgbimgs.txt', 'depthimgs.txt')
     directory = ('rgb', 'depth')
-    extension = ('png', 'jpeg', 'mat')
+    extension = ('png', 'jpeg', 'mat', 'jpg')
 
     for txt_, dir_ in zip(filetxt, directory):
 
@@ -25,6 +25,6 @@ def load_images_from_folder(folder):
         f.close()
 
 
-folder = "office"
+folder = "newpiv2"
 
 load_images_from_folder(folder)
