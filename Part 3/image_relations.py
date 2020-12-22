@@ -56,14 +56,16 @@ def transformation2cameras( camera: tuple, pc1_file: int = 0, pc2_file: int = 1 
     with open( "point_clouds.p", "wb" ) as file:
         pk.dump( dict_pc, file, protocol=pk.HIGHEST_PROTOCOL )
 
+    if( len(xy[0]) ) < 150:
+        return ( None, None, 0 )
 
-    r, t, pc_new = ransac(pc_rgb1, pc_rgb2, xy, rgb1.shape)
+    r, t, ratio_inliers, pc_new = ransac(pc_rgb1, pc_rgb2, xy, rgb1.shape)
 
     pc_in_matlab( (pc_rgb1, pc_new), (rgb1, rgb1), ('PC1', 'PC2') )
 
     #rgb_pc_to_rgb_img( pc_new, k_rgb, rgb1 )  #remove
 
-    return (r, t)
+    return (r, t, ratio_inliers)
 
 def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple, percentage_inliers_threshold = 0.5 ) -> ( tuple ):
     
@@ -117,6 +119,7 @@ def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple, percentage_inlie
                 num_inliers+=1
 
         if(num_inliers == 0): continue
+
         # tuning model - adjust RT based on point cloud already found
         r_tuning, t_tuning = procrustes( pc1[:, [inliers[0], inliers[1]][0]], pc_1_try[:, [inliers[0], inliers[1]][0]] )
 
@@ -137,7 +140,7 @@ def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple, percentage_inlie
 
             r_best, t_best = (r, t)
             pc_try_best = pc_1_try
-            #max_inliers = num_inliers
+            max_inliers = num_inliers
             best_inliers = [inliers[0], inliers[1]]
             best_inliers = best_inliers.copy()
             already_nice_rt = True
@@ -156,11 +159,13 @@ def ransac( pc1: np.array, pc2: np.array, xy: list, dim: tuple, percentage_inlie
 
     print(f'Number of inliers ransac {max_inliers}', end='\t >> \t')
 
-    has_tuned = '\t:(' if max_inliers_tuned < max_inliers else ':)\t'
+    has_tuned = '\t:(' if max_inliers_tuned == max_inliers else ':)\t'
 
     print(f'Tuning: {max_inliers_tuned}\t{has_tuned}\t{"[ *** Found a nice [RT] !! :) *** ]" if already_nice_rt else ""}\t', flush=True)
 
-    return ( r_best, t_best, pc_try_best ) 
+    ratio_inliers = max_inliers/len(xy[0])
+
+    return ( r_best, t_best, ratio_inliers, pc_try_best ) 
 
 def check_num_inlers( pc1: np.array, pc2: np.array, xy: list, dist_inliers_threshold: int, f_map) ->( int ):
 
