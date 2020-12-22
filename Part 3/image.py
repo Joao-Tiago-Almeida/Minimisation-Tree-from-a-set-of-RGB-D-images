@@ -85,7 +85,7 @@ with open(sys.argv[4], 'r') as file:
     
     path_file_name_output = file.readline()
 
-i = 20
+i = 4
 
 rigid_transformation = lambda r, t, pc: r@pc + t
 depth_pc_2_rgb_pc = lambda xyz: np.concatenate( (r_depth2rgb, t_depth2rgb), axis=1)@np.concatenate( (xyz, np.ones((1, xyz.shape[1]), dtype=float) ), axis=0 )
@@ -96,19 +96,21 @@ pc_rgb2 = depth_pc_2_rgb_pc( generate_depth_pc(depthimgs[i+1], k_depth) )
 
 r,t = display_image(i)
 
-# pc_generated = rigid_transformation(r, t, pc_rgb2)
+pc_generated = rigid_transformation(r, t, pc_rgb2)
 
-# rgb_pc_to_rgb_img(pc_generated, k_rgb, rgbimgs[0])
+rgb_pc_to_rgb_img(pc_generated, k_rgb, rgbimgs[0])
 
 
-from scipy.spatial import distance
+# from scipy.spatial import distance
 
-r_1,t_1 = display_image(5)
+# r_1,t_1 = display_image(5)
 
-for i in range(len(rgbimgs)-1):
-    r_2,t_2 = display_image(i)
-    print(distance.euclidean(np.concatenate( (r_1, t_1.T), axis=0).flatten() , np.concatenate( (r_2, t_2.T), axis=0).flatten() ))
+# for i in range(len(rgbimgs)-1):
+#     r_2,t_2 = display_image(i)
+#     print(distance.euclidean(np.concatenate( (r_1, t_1.T), axis=0).flatten() , np.concatenate( (r_2, t_2.T), axis=0).flatten() ))
 
+# camera = ( rgbimgs[15], rgbimgs[8], depthimgs[15], depthimgs[8], k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
+# R, T = transformation2cameras(camera, 8, 15)
 
 # from sklearn.metrics.pairwise import cosine_similarity
 

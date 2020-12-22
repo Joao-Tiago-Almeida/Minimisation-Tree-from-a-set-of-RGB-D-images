@@ -2,7 +2,7 @@ import numpy as np
 import scipy 
 from image_relations import *
 import pickle as pk
-
+        
 
 def build_graph( camera: tuple) -> ( dict ):
     rgb = camera[0]
@@ -20,9 +20,11 @@ def build_graph( camera: tuple) -> ( dict ):
     best_unfound = {}
     
     
-    stack = list(range(1, len(rgb)))
+    stack = list(range(0, len(rgb)))
 
-    for i in stack:
+    stack_dup = stack.copy()
+
+    for i in stack_dup:
         R, T, percentage = transformation2cameras( ( rgb[0], rgb[i], dep[0], dep[i], k_rgb,  k_depth, r_depth2rgb, t_depth2rgb ), i, 0 )
         if(percentage > 0.5):
             RT_world[i] = {
@@ -41,12 +43,26 @@ def build_graph( camera: tuple) -> ( dict ):
 
     distance = 1
 
+    def compare_stack_values(x):
+        if x not in best_unfound:
+            return -1
+        else:
+            return best_unfound[x]["percentage"]
+
 
     while((len(stack) > 0) and (distance < len(rgb))):
+        print("\n\n\n -------- \n\n\n")
+        print(distance)
+        print("\n\n\n -------- \n\n\n")
+        stack.sort(key=compare_stack_values, reverse=True)
+        print(stack)
+        print("\n\n\n -------- \n\n\n")
         for i in stack:
             for n in [i- distance, i+distance]:
                 if (n > 0) and (n < len(rgb)):
                     R, T, percentage = transformation2cameras( ( rgb[n], rgb[i], dep[n], dep[i], k_rgb,  k_depth, r_depth2rgb, t_depth2rgb ), i, n )
+                    print(i, n, percentage)
+                    print("\n\n\n -------- \n\n\n")
                     if (percentage > 0.5) and (n in RT_world):
                             # Insert in graph
                             RT_world[i] = {
@@ -75,7 +91,7 @@ def build_graph( camera: tuple) -> ( dict ):
                             break
                     else:
                         # If its better than best_unfound, update
-                        if (i in best_unfound) and (i not in RT_world):
+                        if (i in best_unfound) and (n not in RT_world):
                             if percentage > best_unfound[i]["percentage"]:
                                 best_unfound[i] = {
                                     "parent": n, 

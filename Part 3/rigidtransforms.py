@@ -57,10 +57,39 @@ with open(sys.argv[4], 'r') as file:
 # try:    os.remove("point_clouds.p")
 # except: pass
 
-camera = ( rgbimgs, depthimgs, k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
-build_graph(camera)
+# camera = ( rgbimgs, depthimgs, k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
+# build_graph(camera)
 
 
 
 # camera = ( rgbimgs[1], rgbimgs[2], depthimgs[1], depthimgs[2], k_rgb,  k_depth, r_depth2rgb, t_depth2rgb )
 # R, T = transformation2cameras(camera, 1, 2)
+
+
+file = open( "rt_graph.p", "rb" )
+dict_pc = pk.load( file )
+file.close()
+
+RT = []
+
+keys_dict = list(dict_pc.keys())
+keys_dict.sort()
+
+for i in keys_dict:
+    R_total = np.identity(3)
+    T_total = np.zeros((3,1))
+    parent = i
+    while(True):
+        R_total = R_total@dict_pc[parent]["R"]
+        T_total = T_total + dict_pc[parent]["T"]
+        parent = dict_pc[parent]["parent"]
+        if parent == 0:
+            RT.append( np.concatenate( (R_total, T_total.T), axis=0).flatten() )
+            break
+
+
+np.savetxt(fname=path_file_name_output, 
+            X=RT,
+            delimiter='\t',
+            newline='\n'
+            )

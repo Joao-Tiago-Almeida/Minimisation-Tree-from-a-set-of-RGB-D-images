@@ -56,7 +56,7 @@ def transformation2cameras( camera: tuple, pc1_file: int = 0, pc2_file: int = 1 
     with open( "point_clouds.p", "wb" ) as file:
         pk.dump( dict_pc, file, protocol=pk.HIGHEST_PROTOCOL )
 
-    if( len(xy[0]) ) < 150:
+    if( len(xy[0]) ) < int(rgb1.shape[0] * rgb1.shape[1] * 0.001):
         return ( None, None, 0 )
 
     r, t, ratio_inliers, pc_new = ransac(pc_rgb1, pc_rgb2, xy, rgb1.shape)
