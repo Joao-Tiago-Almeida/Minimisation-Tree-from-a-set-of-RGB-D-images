@@ -1,9 +1,0 @@
-newpiv2/depth/depth_1.mat
-newpiv2/depth/depth_2.mat
-newpiv2/depth/depth_3.mat
-newpiv2/depth/depth_4.mat
-newpiv2/depth/depth_5.mat
-newpiv2/depth/depth_6.mat
-newpiv2/depth/depth_7.mat
-newpiv2/depth/depth_8.mat
-newpiv2/depth/depth_9.mat
