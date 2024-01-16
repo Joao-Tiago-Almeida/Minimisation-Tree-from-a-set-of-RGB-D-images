@@ -1,4 +1,4 @@
 opencv-python==4.4.0.44
 numpy==1.22.0
-scipy==1.5.3
+scipy>=1.10.0
 matplotlib==3.3.2
